@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/AuthForm';
 import { ErrorBanner } from '../components/ErrorBanner';
 import authService from '../services/authService';
+import type { User } from '../services/authService';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,13 +17,23 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     if (authService.getToken()) {
-      navigate(from, { replace: true });
+      const user = authService.getUser();
+      if (user?.role === 'OFFICER') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(from === '/admin' ? '/reservation' : from, { replace: true });
+      }
     }
   }, [navigate, from]);
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (_token: string, user: User) => {
     setErrorMessage(null);
-    navigate(from, { replace: true });
+    // Officers go straight to dashboard; customers go to the original requested page
+    if (user.role === 'OFFICER') {
+      navigate('/admin', { replace: true });
+    } else {
+      navigate(from === '/admin' ? '/reservation' : from, { replace: true });
+    }
   };
 
   const handleAuthError = (msg: string) => {
