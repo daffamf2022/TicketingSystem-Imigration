@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #ffffff;
+  --color-brand-bg: #f8fafc;
+  --color-brand-accent: #0f172a; /* Deep tech Charcoal */
+  --color-brand-accent-hover: #1e3a8a; /* Space Blue */
+  --color-brand-charcoal: #0f172a;
+  
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'Space Grotesk', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Base Body Styles */
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* Global Focus Styles */
+*:focus-visible {
+  outline: 2px solid #0f172a !important;
+  outline-offset: 2px !important;
+}
+
+/* High Contrast Mode Global Overrides */
+html.high-contrast {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast * {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html.high-contrast a,
+html.high-contrast button,
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast textarea {
+  border: 2px solid #ffffff !important;
+  outline: none !important;
+}
+
+html.high-contrast a:hover,
+html.high-contrast button:hover {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  text-decoration: underline !important;
+}
+
+html.high-contrast *:focus-visible {
+  outline: 3px solid #ffff00 !important; /* Highly visible yellow focus outline */
+  outline-offset: 3px !important;
+}
+
+/* ── New A11y feature classes ───────────────────────────────── */
+
+/* Rename high-contrast to new class name (keep both for compatibility) */
+html.a11y-contrast,
+html.high-contrast {
+  filter: contrast(2) !important;
+}
+
+/* Highlight links */
+html.a11y-links a {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 3px !important;
+  outline: 2px solid currentColor !important;
+  outline-offset: 1px !important;
+  border-radius: 2px !important;
+}
+
+/* Larger letter & word spacing */
+html.a11y-spacing * {
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.25em !important;
+}
+
+/* Pause all CSS animations and transitions */
+html.a11y-pause *,
+html.a11y-pause *::before,
+html.a11y-pause *::after {
+  animation-play-state: paused !important;
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Hide decorative images (keep alt text visible) */
+html.a11y-hide-images img,
+html.a11y-hide-images [role="img"],
+html.a11y-hide-images figure,
+html.a11y-hide-images picture {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Dyslexia-friendly font stack */
+html.a11y-dyslexia,
+html.a11y-dyslexia * {
+  font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Trebuchet MS', Arial, sans-serif !important;
+  letter-spacing: 0.05em !important;
+  word-spacing: 0.15em !important;
+  line-height: 1.8 !important;
+}
+
+/* Large cursor */
+html.a11y-cursor,
+html.a11y-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'%3E%3Cpath fill='black' stroke='white' stroke-width='1' d='M5 3l14 9-7 1-4 7-3-17Z'/%3E%3C/svg%3E") 0 0, auto !important;
+}
+
+/* Increased line height */
+html.a11y-lineheight *:not(button):not(input):not(select) {
+  line-height: 2.2 !important;
+}
+
+/* Text alignment overrides */
+html.a11y-align-left *:not(button):not(input):not(select):not(th) {
+  text-align: left !important;
+}
+html.a11y-align-center *:not(button):not(input):not(select):not(th) {
+  text-align: center !important;
+}
+html.a11y-align-right *:not(button):not(input):not(select):not(th) {
+  text-align: right !important;
+}
+
+/* Saturation filters */
+html.a11y-sat-low { filter: saturate(0.3) !important; }
+html.a11y-sat-high { filter: saturate(2.5) !important; }
+html.a11y-sat-mono { filter: grayscale(1) !important; }
+
+/* Pure Black & White — applies a single grayscale+contrast filter at root level only */
+html.a11y-bw {
+  filter: grayscale(1) contrast(10) !important;
+  -webkit-filter: grayscale(1) contrast(10) !important;
+}

@@ -1,0 +1,81 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  nik          String        @unique
+  name         String
+  email        String        @unique
+  password     String
+  role         String        @default("CUSTOMER")
+  nip          String?       @unique
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  reservations Reservation[]
+
+  @@map("users")
+}
+
+model Quota {
+  id             String        @id @default(uuid())
+  date           DateTime      @db.Date
+  startTime      String        @map("start_time") // e.g. "08:00"
+  endTime        String        @map("end_time")   // e.g. "10:00"
+  maxQuota       Int           @map("max_quota")
+  remainingQuota Int           @map("remaining_quota")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  reservations   Reservation[]
+
+  @@unique([date, startTime, endTime])
+  @@map("quotas")
+}
+
+model Reservation {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  quotaId     String      @map("quota_id")
+  queueNumber String      @map("queue_number")
+  status      String      @default("PENDING") // PENDING, VERIFIED, COMPLETED, CANCELLED
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quota       Quota       @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  companion   Companion?
+  documents   Document[]
+
+  @@unique([quotaId, queueNumber])
+  @@map("reservations")
+}
+
+model Companion {
+  id                      String      @id @default(uuid())
+  reservationId           String      @unique @map("reservation_id")
+  needsDisabilityFacility Boolean     @default(false) @map("needs_disability_facility")
+  disabilityType          String?     @map("disability_type") // tunanetra, kursi_roda, dll.
+  companionName           String?     @map("companion_name")
+  companionNik            String?     @map("companion_nik")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
+  reservation             Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@map("companions")
+}
+
+model Document {
+  id            String      @id @default(uuid())
+  reservationId String      @map("reservation_id")
+  documentType  String      @map("document_type") // KTP, KK, AKTA_KELAHIRAN, dll.
+  filePath      String      @map("file_path")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
