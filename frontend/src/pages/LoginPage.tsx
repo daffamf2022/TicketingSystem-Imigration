@@ -31,7 +31,6 @@ export const LoginPage: React.FC = () => {
   const handleAuthSuccess = (_token: string, user: User) => {
     setErrorMessage(null);
     const normalizedRole = user.role === 'ADMIN' ? 'OFFICER' : user.role;
-    // Officers go straight to dashboard; customers go to the original requested page
     if (normalizedRole === 'OFFICER') {
       navigate('/admin', { replace: true });
     } else {
