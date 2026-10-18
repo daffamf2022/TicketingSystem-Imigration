@@ -35,3 +35,23 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
     return;
   }
 };
+
+export const optionalAuthMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const secret = process.env.JWT_SECRET || 'development_jwt_secret_key_12345';
+    const decoded = jwt.verify(token, secret) as AuthPayload;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    next();
+  }
+};

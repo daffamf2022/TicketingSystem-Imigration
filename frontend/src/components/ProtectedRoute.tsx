@@ -11,6 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const token = authService.getToken();
   const user = authService.getUser();
   const location = useLocation();
+  const normalizedRole = user?.role === 'ADMIN' ? 'OFFICER' : user?.role;
 
   if (!token) {
     // Redirect to login page and store the source location path for later redirect
@@ -26,13 +27,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Redirect to guide page with a warning notice
+  if (allowedRoles && (!normalizedRole || !allowedRoles.includes(normalizedRole))) {
+    const redirectTo = normalizedRole === 'OFFICER' ? '/admin' : '/guide';
     return (
       <Navigate 
-        to="/guide" 
+        to={redirectTo}
         state={{ 
-          message: 'Akses Ditolak: Halaman tersebut hanya dapat diakses oleh Petugas Kantor Imigrasi.' 
+          message: 'Akses ditolak. Halaman ini tidak tersedia untuk peran akun Anda.'
         }} 
         replace 
       />

@@ -6,6 +6,7 @@ import Reservation from './pages/Reservation';
 import TicketDetail from './pages/TicketDetail';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AccessibilityWidget from './components/AccessibilityWidget';
 
@@ -25,26 +26,29 @@ function App() {
               {/* Public Routes */}
               <Route path="/guide" element={<Guide />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+              {/* Applicant flow */}
+              <Route
+                path="/reservation"
+                element={
+                  <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                    <Reservation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ticket/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                    <TicketDetail />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Routes */}
               <Route 
-                path="/reservation" 
-                element={
-                  <ProtectedRoute>
-                    <Reservation />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/ticket/:id" 
-                element={
-                  <ProtectedRoute>
-                    <TicketDetail />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin" 
+                path="/admin/*"
                 element={
                   <ProtectedRoute allowedRoles={['OFFICER']}>
                     <AdminDashboard />
@@ -59,8 +63,8 @@ function App() {
           </main>
           
           {/* Accessible Footer */}
-          <footer className="bg-slate-900 text-slate-400 py-6 text-center text-sm border-t border-slate-800" role="contentinfo">
-            <p>© 2026 Kantor Imigrasi RI — SIAP-Prioritas (Sistem Antrean Paspor Inklusif).</p>
+          <footer className="py-6 text-center text-sm border-t" style={{ background: 'linear-gradient(90deg, #0b5fa8 0%, #0d7fc8 100%)', color: '#ffffff', borderColor: '#0a4f90' }} role="contentinfo">
+            <p>© 2026 Kantor Imigrasi Kelas I TPI Yogyakarta — SIAP.PRIORITAS, prototipe akademik Sistem Informasi Layanan Prioritas Paspor (bukan sistem produksi).</p>
           </footer>
         </div>
       </BrowserRouter>

@@ -1,34 +1,47 @@
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/client"
 }
 
 model User {
-  id           String        @id @default(uuid())
-  nik          String        @unique
-  name         String
-  email        String        @unique
-  password     String
-  role         String        @default("CUSTOMER")
-  nip          String?       @unique
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  reservations Reservation[]
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  nik                String              @unique
+  name               String
+  email              String              @unique
+  password           String
+  role               String              @default("CUSTOMER")
+  nip                String?             @unique
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  reservations       Reservation[]
+  passwordResetToken PasswordResetToken?
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model Quota {
   id             String        @id @default(uuid())
   date           DateTime      @db.Date
   startTime      String        @map("start_time") // e.g. "08:00"
-  endTime        String        @map("end_time")   // e.g. "10:00"
+  endTime        String        @map("end_time") // e.g. "10:00"
   maxQuota       Int           @map("max_quota")
   remainingQuota Int           @map("remaining_quota")
+  cutoffMinutes  Int?          @map("cutoff_minutes") // Set by service unit; null/0 means no cut-off
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   reservations   Reservation[]
@@ -38,17 +51,18 @@ model Quota {
 }
 
 model Reservation {
-  id          String      @id @default(uuid())
-  userId      String      @map("user_id")
-  quotaId     String      @map("quota_id")
-  queueNumber String      @map("queue_number")
-  status      String      @default("PENDING") // PENDING, VERIFIED, COMPLETED, CANCELLED
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quota       Quota       @relation(fields: [quotaId], references: [id], onDelete: Restrict)
-  companion   Companion?
-  documents   Document[]
+  id              String     @id @default(uuid())
+  userId          String     @map("user_id")
+  quotaId         String     @map("quota_id")
+  applicationCode String     @unique @map("application_code")
+  queueNumber     String?    @map("queue_number")
+  status          String      @default("PENDING") // PENDING, VERIFIED, REJECTED, COMPLETED, CANCELLED
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quota           Quota      @relation(fields: [quotaId], references: [id], onDelete: Restrict)
+  companion       Companion?
+  documents       Document[]
 
   @@unique([quotaId, queueNumber])
   @@map("reservations")

@@ -7,3 +7,11 @@ export const officerMiddleware = (req: Request, res: Response, next: NextFunctio
   }
   next();
 };
+
+export const customerMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.user || req.user.role !== 'CUSTOMER') {
+    res.status(403).json({ status: 'error', message: 'Akses ditolak. Layanan ini hanya untuk pemohon.' });
+    return;
+  }
+  next();
+};

@@ -8,11 +8,27 @@ export interface Quota {
   end_time: string;
   remaining_quota: number;
   max_quota: number;
+  cutoff_minutes?: number | null;
 }
 
 export interface QuotaListResponse {
   status: string;
   data: Quota[];
+}
+
+export interface AdminQuota {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  max_quota: number;
+  remaining_quota: number;
+  cutoff_minutes?: number | null;
+}
+
+export interface AdminQuotaResponse {
+  status: string;
+  data: AdminQuota[];
 }
 
 export interface CompanionResponse {
@@ -29,7 +45,8 @@ export interface DocumentResponse {
 
 export interface ReservationData {
   reservation_id: string;
-  queue_number: string;
+  application_code?: string;
+  queue_number: string | null;
   status: string;
   companion: CompanionResponse | null;
   documents: DocumentResponse[];
@@ -37,7 +54,8 @@ export interface ReservationData {
 
 export interface SingleReservationData {
   id: string;
-  queueNumber: string;
+  applicationCode: string;
+  queueNumber: string | null;
   status: string;
   quota: {
     date: string;
@@ -86,14 +104,15 @@ export const reservationService = {
     }
   },
 
-  async createReservation(formData: FormData, token: string): Promise<ReservationResponse> {
+  async createReservation(formData: FormData, token?: string): Promise<ReservationResponse> {
     try {
-      const response = await apiClient.post<ReservationResponse>('/reservations', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const headers: Record<string, string> = {};
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await apiClient.post<ReservationResponse>('/reservations', formData, { headers });
       return response.data;
     } catch (error: unknown) {
       let msg = 'Gagal membuat reservasi antrean.';
@@ -104,13 +123,17 @@ export const reservationService = {
     }
   },
 
-  async getReservationDetails(id: string, token: string): Promise<SingleReservationResponse> {
+  async getReservationDetails(id: string, token?: string): Promise<SingleReservationResponse> {
     try {
-      const response = await apiClient.get<SingleReservationResponse>(`/reservations/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const config = token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        : undefined;
+
+      const response = await apiClient.get<SingleReservationResponse>(`/reservations/${id}`, config);
       return response.data;
     } catch (error: unknown) {
       let msg = 'Gagal mengambil detail tiket antrean.';
@@ -138,6 +161,51 @@ export const reservationService = {
     }
   },
 
+  async getAllQuotaOverview(token: string): Promise<AdminQuotaResponse> {
+    try {
+      const response = await apiClient.get<AdminQuotaResponse>('/quotas/admin', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal mengambil data kuota untuk dashboard petugas.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
+  async updateQuotaSlot(id: string, adjustment: number, token: string, cutoffMinutes?: number | null, cutoffTime?: string | null): Promise<AdminQuotaResponse['data'][number]> {
+    try {
+      const payload: Record<string, number | string> = {};
+      if (Number.isInteger(adjustment)) {
+        payload.adjustment = adjustment;
+      }
+      if (cutoffMinutes !== undefined) {
+        payload.cutoffMinutes = Number(cutoffMinutes);
+      }
+      if (cutoffTime !== undefined && cutoffTime !== null) {
+        payload.cutoffTime = cutoffTime;
+      }
+
+      const response = await apiClient.patch<{ status: string; data: AdminQuotaResponse['data'][number] }>(`/quotas/${id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal memperbarui kuota.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
   async updateReservationStatus(id: string, status: string, token: string): Promise<SingleReservationResponse> {
     try {
       const response = await apiClient.patch<SingleReservationResponse>(`/reservations/${id}/status`, { status }, {
@@ -148,6 +216,23 @@ export const reservationService = {
       return response.data;
     } catch (error: unknown) {
       let msg = 'Gagal memperbarui status tiket.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
+  async deleteReservation(id: string, token: string): Promise<{ status: string; message: string }> {
+    try {
+      const response = await apiClient.delete<{ status: string; message: string }>(`/reservations/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal menghapus tiket antrean.';
       if (axios.isAxiosError(error)) {
         msg = error.response?.data?.message || msg;
       }

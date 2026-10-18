@@ -19,7 +19,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploads static folder
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('Content-Disposition', 'attachment');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  },
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

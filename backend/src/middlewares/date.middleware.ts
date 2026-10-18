@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
+import { getJakartaDateString } from '../lib/date';
 
 /**
- * Middleware to restrict reservation requests to Today (Hari H) and Tomorrow (Besok) only.
+ * Restrict reservation requests to same-day appointments only.
  */
 export const dateMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -30,39 +31,13 @@ export const dateMiddleware = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    const getLocalDateStr = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+    const todayStr = getJakartaDateString();
+    const targetDateStr = targetDate.toISOString().slice(0, 10);
 
-    const getUtcDateStr = (d: Date) => {
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const todayStr = getLocalDateStr(new Date());
-    const tomorrowStr = getLocalDateStr(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
-
-    const dateObj = targetDate instanceof Date ? targetDate : new Date(targetDate);
-    const targetDateStr = getUtcDateStr(dateObj);
-
-    console.log('DATE DIAGNOSTIC:', { 
-      todayStr, 
-      tomorrowStr, 
-      targetDateStr, 
-      targetDate, 
-      dateObj,
-      rawBody: req.body
-    });
-
-    if (targetDateStr !== todayStr && targetDateStr !== tomorrowStr) {
+    if (targetDateStr !== todayStr) {
       res.status(400).json({
         status: 'error',
-        message: 'Jadwal reservasi hanya diperbolehkan untuk Hari Ini (Hari H) atau Besok.',
+        message: 'Permohonan hanya dapat diajukan untuk jadwal hari ini.',
       });
       return;
     }

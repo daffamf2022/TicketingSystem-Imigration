@@ -3,7 +3,13 @@ import type { UseFormRegister, FieldErrors } from 'react-hook-form';
 import type { Quota } from '../services/reservationService';
 
 export interface ReservationFormInputs {
+  name: string;
+  nik: string;
+  email: string;
   quota_id: string;
+  applicant_type: 'pemohon' | 'pendamping';
+  representative_name: string;
+  representative_nik: string;
   needs_companion: boolean;
   disabilityType: string;
   companionName: string;
@@ -25,6 +31,21 @@ interface QuotaSelectorProps {
   selectedQuotaId: string | undefined;
 }
 
+const formatCutoffDisplay = (startTime: string, cutoffMinutes: number | null | undefined) => {
+  if (!cutoffMinutes || cutoffMinutes <= 0) {
+    return null;
+  }
+
+  const [slotHour, slotMinute] = startTime.split(':').map(Number);
+  const totalMinutes = slotHour * 60 + slotMinute;
+  const cutoffTotal = totalMinutes - cutoffMinutes;
+
+  const hour = Math.floor(cutoffTotal / 60);
+  const minute = cutoffTotal % 60;
+
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+};
+
 export const QuotaSelector: React.FC<QuotaSelectorProps> = ({ 
   quotas, 
   loading, 
@@ -36,12 +57,12 @@ export const QuotaSelector: React.FC<QuotaSelectorProps> = ({
   return (
     <fieldset className="p-8 bg-white border border-slate-300 rounded-lg shadow-sm space-y-6">
       <div className="space-y-1">
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-slate-600 font-bold block">JADWAL KEDATANGAN / SLOTS</span>
-        <legend className="text-2xl font-black tracking-tight text-slate-900">1. Pilih Jadwal Pelayanan</legend>
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-slate-600 font-bold block">Jadwal Kedatangan / Slot</span>
+        <legend className="text-2xl font-black tracking-tight text-slate-900">5. Pilih Jadwal</legend>
       </div>
       
       <p className="text-base text-slate-600 leading-relaxed font-medium">
-        Silakan pilih waktu kehadiran Anda. Jadwal kedatangan dibatasi hanya untuk Hari Ini atau Besok guna meminimalisir kepadatan di lokasi.
+        Silakan pilih waktu kehadiran Anda. Jadwal kedatangan dibatasi hanya untuk hari ini guna meminimalisir kepadatan di lokasi.
       </p>
 
       <div className="flex justify-between items-center flex-wrap gap-4 border-b border-slate-100 pb-4">
@@ -68,9 +89,8 @@ export const QuotaSelector: React.FC<QuotaSelectorProps> = ({
         >
           {quotas.map((quota) => {
             const isExhausted = quota.remaining_quota <= 0;
-            const isSelected = selectedQuotaId === quota.id;
-            const labelId = `label-quota-${quota.id}`;
-            
+            const cutoffMinutes = quota.cutoff_minutes ?? 0;
+            const cutoffDisplay = formatCutoffDisplay(quota.start_time, cutoffMinutes);
             const quotaDateStr = quota.date.split('T')[0];
             const localDate = new Date();
             const year = localDate.getFullYear();
@@ -78,17 +98,23 @@ export const QuotaSelector: React.FC<QuotaSelectorProps> = ({
             const day = String(localDate.getDate()).padStart(2, '0');
             const localTodayStr = `${year}-${month}-${day}`;
             const isToday = quotaDateStr === localTodayStr;
+
+            const slotStart = new Date(quotaDateStr + 'T' + quota.start_time + ':00');
+            const cutoffReached = cutoffMinutes > 0 && localDate > new Date(slotStart.getTime() - cutoffMinutes * 60 * 1000);
+            const isUnavailable = isExhausted || cutoffReached || !isToday;
+            const isSelected = selectedQuotaId === quota.id;
+            const labelId = `label-quota-${quota.id}`;
             
             return (
               <label
                 key={quota.id}
                 htmlFor={quota.id}
-                className={`relative flex items-center justify-between p-6 border rounded-lg cursor-pointer transition-all focus-within:ring-2 focus-within:ring-slate-900 ${
-                  isExhausted 
-                    ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-200' 
+                className={`relative flex items-center justify-between p-6 border rounded-lg transition-all focus-within:ring-2 focus-within:ring-slate-900 ${
+                  isUnavailable
+                    ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-200'
                     : isSelected
-                      ? 'border-slate-900 bg-slate-50/50 ring-1 ring-slate-900 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-slate-400'
+                      ? 'border-slate-900 bg-slate-50/50 ring-1 ring-slate-900 shadow-sm cursor-pointer'
+                      : 'border-slate-200 bg-white hover:border-slate-400 cursor-pointer'
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -96,7 +122,7 @@ export const QuotaSelector: React.FC<QuotaSelectorProps> = ({
                     id={quota.id}
                     type="radio"
                     value={quota.id}
-                    disabled={isExhausted}
+                    disabled={isUnavailable}
                     required
                     {...register('quota_id', { required: 'Jadwal pelayanan wajib dipilih.' })}
                     className="sr-only"
@@ -118,26 +144,30 @@ export const QuotaSelector: React.FC<QuotaSelectorProps> = ({
  
                   <div id={labelId} className="space-y-0.5">
                     <span className="block text-lg font-bold text-slate-900">
-                      {isToday ? 'Hari Ini' : 'Besok'}
+                      {isToday ? 'Hari Ini' : 'Jadwal Tidak Tersedia'}
                     </span>
                     <span className="block font-mono text-xs uppercase tracking-wider text-slate-500 font-bold">
                       {quota.start_time} - {quota.end_time} WIB
                     </span>
+                    {cutoffDisplay && (
+                      <span className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        Batas waktu: {cutoffDisplay}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
-                {/* Clean rectangular solid badge */}
                 <div 
                   className={`text-xs font-mono font-bold py-1.5 px-3 rounded uppercase tracking-wider transition-colors ${
-                    isExhausted 
-                      ? 'bg-red-50 text-red-800 border border-red-200' 
+                    isUnavailable
+                      ? 'bg-red-50 text-red-800 border border-red-200'
                       : isSelected
                         ? 'bg-slate-900 text-white border border-slate-900'
                         : 'bg-slate-50 text-slate-700 border border-slate-200'
                   }`}
                   aria-live="polite"
                 >
-                  Sisa: {quota.remaining_quota}
+                  {isUnavailable ? (cutoffReached ? 'ATUR WAKTU' : 'HABIS') : `Sisa: ${quota.remaining_quota}`}
                 </div>
               </label>
             );

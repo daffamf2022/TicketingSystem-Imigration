@@ -8,6 +8,7 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "db:seed": "ts-node-dev --transpile-only src/seed.ts",
+    "admin:create": "npm run build && node dist/scripts/createOfficer.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,15 +16,16 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.8.0",
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mariadb": "^3.5.3",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "nodemailer": "^10.0.15",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -32,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.1.1",
+    "@types/nodemailer": "^8.0.2",
     "prisma": "^7.8.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.3"

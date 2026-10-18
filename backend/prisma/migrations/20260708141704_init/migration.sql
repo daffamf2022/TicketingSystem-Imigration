@@ -1,82 +1,105 @@
--- CreateTable
-CREATE TABLE `users` (
-    `id` VARCHAR(191) NOT NULL,
-    `nik` VARCHAR(191) NOT NULL,
-    `name` VARCHAR(191) NOT NULL,
-    `email` VARCHAR(191) NOT NULL,
-    `password` VARCHAR(191) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `users_nik_key`(`nik`),
-    UNIQUE INDEX `users_email_key`(`email`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateTable
-CREATE TABLE `quotas` (
-    `id` VARCHAR(191) NOT NULL,
-    `date` DATE NOT NULL,
-    `start_time` VARCHAR(191) NOT NULL,
-    `end_time` VARCHAR(191) NOT NULL,
-    `max_quota` INTEGER NOT NULL,
-    `remaining_quota` INTEGER NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+CREATE TABLE "users" (
+    "id" TEXT NOT NULL,
+    "nik" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'CUSTOMER',
+    "nip" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-    UNIQUE INDEX `quotas_date_start_time_end_time_key`(`date`, `start_time`, `end_time`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `reservations` (
-    `id` VARCHAR(191) NOT NULL,
-    `user_id` VARCHAR(191) NOT NULL,
-    `quota_id` VARCHAR(191) NOT NULL,
-    `queue_number` VARCHAR(191) NOT NULL,
-    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `reservations_quota_id_queue_number_key`(`quota_id`, `queue_number`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `companions` (
-    `id` VARCHAR(191) NOT NULL,
-    `reservation_id` VARCHAR(191) NOT NULL,
-    `needs_disability_facility` BOOLEAN NOT NULL DEFAULT false,
-    `disability_type` VARCHAR(191) NULL,
-    `companion_name` VARCHAR(191) NULL,
-    `companion_nik` VARCHAR(191) NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+CREATE TABLE "quotas" (
+    "id" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "start_time" TEXT NOT NULL,
+    "end_time" TEXT NOT NULL,
+    "max_quota" INTEGER NOT NULL,
+    "remaining_quota" INTEGER NOT NULL,
+    "cutoff_minutes" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-    UNIQUE INDEX `companions_reservation_id_key`(`reservation_id`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "quotas_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `documents` (
-    `id` VARCHAR(191) NOT NULL,
-    `reservation_id` VARCHAR(191) NOT NULL,
-    `document_type` VARCHAR(191) NOT NULL,
-    `file_path` VARCHAR(191) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+CREATE TABLE "reservations" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "quota_id" TEXT NOT NULL,
+    "application_code" TEXT NOT NULL,
+    "queue_number" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "reservations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "companions" (
+    "id" TEXT NOT NULL,
+    "reservation_id" TEXT NOT NULL,
+    "needs_disability_facility" BOOLEAN NOT NULL DEFAULT false,
+    "disability_type" TEXT,
+    "companion_name" TEXT,
+    "companion_nik" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "companions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents" (
+    "id" TEXT NOT NULL,
+    "reservation_id" TEXT NOT NULL,
+    "document_type" TEXT NOT NULL,
+    "file_path" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_nik_key" ON "users"("nik");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_nip_key" ON "users"("nip");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "quotas_date_start_time_end_time_key" ON "quotas"("date", "start_time", "end_time");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "reservations_application_code_key" ON "reservations"("application_code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "reservations_quota_id_queue_number_key" ON "reservations"("quota_id", "queue_number");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "companions_reservation_id_key" ON "companions"("reservation_id");
 
 -- AddForeignKey
-ALTER TABLE `reservations` ADD CONSTRAINT `reservations_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `reservations` ADD CONSTRAINT `reservations_quota_id_fkey` FOREIGN KEY (`quota_id`) REFERENCES `quotas`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_quota_id_fkey" FOREIGN KEY ("quota_id") REFERENCES "quotas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `companions` ADD CONSTRAINT `companions_reservation_id_fkey` FOREIGN KEY (`reservation_id`) REFERENCES `reservations`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "companions" ADD CONSTRAINT "companions_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `documents` ADD CONSTRAINT `documents_reservation_id_fkey` FOREIGN KEY (`reservation_id`) REFERENCES `reservations`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "documents" ADD CONSTRAINT "documents_reservation_id_fkey" FOREIGN KEY ("reservation_id") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

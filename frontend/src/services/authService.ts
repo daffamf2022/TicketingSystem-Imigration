@@ -3,11 +3,13 @@ import apiClient from './api';
 
 export interface User {
   id: string;
+  username?: string;
   name: string;
   nik: string;
   email: string;
   role: string;
   nip?: string | null;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -40,14 +42,14 @@ export const authService = {
   setSession(token: string, user: User): void {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    // Emit auth-change event to update listening components in real-time
+    // Emit an event so connected components can update the current session.
     window.dispatchEvent(new Event('auth-change'));
   },
 
   clearSession(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Emit auth-change event to update listening components in real-time
+    // Emit an event so connected components can update the current session.
     window.dispatchEvent(new Event('auth-change'));
   },
 
@@ -76,6 +78,70 @@ export const authService = {
       throw new Error(msg, { cause: error });
     }
   },
+
+  async getUsers(token: string): Promise<{ status: string; data: User[] }> {
+    try {
+      const response = await apiClient.get<{ status: string; data: User[] }>('/auth/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal mengambil daftar akun pengguna.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
+  async sendPasswordResetLink(userId: string, token: string): Promise<{ status: string; message: string }> {
+    try {
+      const response = await apiClient.post<{ status: string; message: string }>(`/auth/users/${userId}/password-reset-link`, undefined, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal mengirim tautan atur ulang kata sandi.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<{ status: string; message: string }> {
+    try {
+      const response = await apiClient.post<{ status: string; message: string }>('/auth/reset-password', {
+        token,
+        newPassword,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal mengatur ulang kata sandi.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
+  async requestPasswordReset(email: string): Promise<{ status: string; message: string }> {
+    try {
+      const response = await apiClient.post<{ status: string; message: string }>('/auth/password-reset-link', { email });
+      return response.data;
+    } catch (error: unknown) {
+      let msg = 'Gagal meminta tautan atur ulang kata sandi.';
+      if (axios.isAxiosError(error)) {
+        msg = error.response?.data?.message || msg;
+      }
+      throw new Error(msg, { cause: error });
+    }
+  },
+
 };
 
 export default authService;

@@ -1,5 +1,5 @@
-import { PrismaClient } from "../generated/client";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -12,8 +12,7 @@ if (!databaseUrl) {
   );
 }
 
-// Instantiate the Prisma adapter for MariaDB directly with the connection string
-const adapter = new PrismaMariaDb(databaseUrl);
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 
 // Export the Prisma Client instance
 export const prisma = new PrismaClient({ adapter });

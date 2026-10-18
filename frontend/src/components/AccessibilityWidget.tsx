@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAccessibility } from '../context/AccessibilityContext';
 import type { FontSizeLevel } from '../context/AccessibilityContext';
 
@@ -72,6 +73,7 @@ const SizeBtn: React.FC<SizeButtonProps> = ({ label, active, onClick, textClass 
    Main widget
 --------------------------------------------------------------- */
 export const AccessibilityWidget: React.FC = () => {
+  const { pathname } = useLocation();
   const {
     panelOpen, setPanelOpen,
     fontSizeLevel, setFontSizeLevel,
@@ -89,6 +91,10 @@ export const AccessibilityWidget: React.FC = () => {
     saturation, setSaturation,
     resetAll,
   } = useAccessibility();
+
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <>
@@ -220,10 +226,10 @@ export const AccessibilityWidget: React.FC = () => {
               />
 
               <Tile
-                label="Ramah Disleksia"
+                label="Font Disleksia"
                 active={dyslexiaFont}
                 onClick={() => setDyslexiaFont(!dyslexiaFont)}
-                info="Menggunakan font khusus yang membantu penderita disleksia membaca lebih mudah"
+                info="Menggunakan font Lexend yang lebih mudah dibaca untuk pengguna dengan disleksia"
                 icon={
                   <span className="font-black text-2xl leading-none" style={{ fontFamily: 'Georgia, serif' }}>Df</span>
                 }

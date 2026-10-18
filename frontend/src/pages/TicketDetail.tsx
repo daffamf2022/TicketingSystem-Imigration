@@ -15,17 +15,10 @@ export const TicketDetail: React.FC = () => {
   useEffect(() => {
     const fetchTicket = async () => {
       if (!id) return;
-      
-      const token = authService.getToken();
-      if (!token) {
-        navigate('/login', {
-          state: { message: 'Harap masuk log (login) terlebih dahulu untuk melihat detail tiket Anda.' }
-        });
-        return;
-      }
 
       try {
-        const response = await reservationService.getReservationDetails(id, token);
+        const token = authService.getToken();
+        const response = await reservationService.getReservationDetails(id, token || undefined);
         setTicket(response.data);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -39,6 +32,26 @@ export const TicketDetail: React.FC = () => {
     };
 
     fetchTicket();
+
+    const handleReservationStatusChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ id?: string; status?: string }>;
+      if (!customEvent.detail?.id || customEvent.detail.id !== id) {
+        return;
+      }
+
+      fetchTicket();
+    };
+
+    window.addEventListener('reservation-status-change', handleReservationStatusChange);
+
+    const intervalId = window.setInterval(() => {
+      fetchTicket();
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('reservation-status-change', handleReservationStatusChange);
+      window.clearInterval(intervalId);
+    };
   }, [id, navigate]);
 
   if (loading) {
@@ -70,7 +83,23 @@ export const TicketDetail: React.FC = () => {
   }
 
   const isPriority = ticket.companion !== null && ticket.companion.needsDisabilityFacility;
-  
+  const isPending = ticket.status === 'PENDING';
+  const applicationCode = ticket.applicationCode || 'APP-UNKNOWN';
+  const maskNik = (nik: string) => nik.length <= 8
+    ? '*'.repeat(nik.length)
+    : `${nik.slice(0, 4)}${'*'.repeat(nik.length - 8)}${nik.slice(-4)}`;
+  const statusLabelMap: Record<string, string> = {
+    PENDING: 'Menunggu Verifikasi',
+    VERIFIED: 'Disetujui',
+    COMPLETED: 'Selesai',
+    CANCELLED: 'Dibatalkan',
+    REJECTED: 'Ditolak',
+    DITOLAK: 'Ditolak',
+  };
+  const finalQueueNotice = isPending
+    ? 'Nomor antrean diberikan setelah petugas menyetujui pengajuan.'
+    : 'Kode pengajuan tetap digunakan sebagai referensi verifikasi.';
+
   const formattedDate = new Date(ticket.quota.date).toLocaleDateString('id-ID', {
     weekday: 'long',
     year: 'numeric',
@@ -78,10 +107,13 @@ export const TicketDetail: React.FC = () => {
     day: 'numeric',
   });
 
+  const qrContent = `Kode Pengajuan: ${applicationCode} | Nomor Antrean: ${ticket.queueNumber || 'Belum diberikan'} | Nama: ${ticket.user.name} | Status: ${statusLabelMap[ticket.status] || ticket.status} | Jadwal: ${formattedDate}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrContent)}`;
+
   // Metadata parser for disabilityType formatted string
   const rawDisability = ticket.companion?.disabilityType || '';
   
-  let category = 'reguler';
+  let category = 'nonprioritas';
   let assistance = 'Tidak ada bantuan khusus';
   let passportType = 'Paspor Baru';
   
@@ -112,7 +144,16 @@ export const TicketDetail: React.FC = () => {
         ? 'IBU HAMIL' 
         : category.toUpperCase() === 'BALITA' 
           ? 'BALITA (DI BAWAH 5 TAHUN)' 
-          : 'REGULER (UMUM)';
+          : 'DATA LAMA: NONPRIORITAS';
+  const priorityCategoryLabel = category.toUpperCase() === 'LANSIA'
+    ? 'Lansia'
+    : category.toUpperCase() === 'DISABILITAS'
+      ? 'Disabilitas'
+      : category.toUpperCase() === 'HAMIL' || category.toUpperCase() === 'IBU HAMIL'
+        ? 'Ibu Hamil'
+        : category.toUpperCase() === 'BALITA'
+          ? 'Balita'
+          : category;
 
   return (
     <div className="w-full px-8 md:px-12 py-12 focus-visible:outline-none bg-brand-bg" id="main-content">
@@ -128,34 +169,68 @@ export const TicketDetail: React.FC = () => {
           </header>
 
           <section 
-            className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm print:border-none"
+            className="premium-card rounded-lg overflow-hidden print:border-none"
             aria-label="Detail Kartu Tiket Antrean"
           >
             {/* Strip header */}
             <div className={`py-4 text-center text-[11px] font-mono font-bold uppercase tracking-[0.2em] text-white ${
-              isPriority ? 'bg-yellow-600' : 'bg-slate-950'
+              isPriority ? 'bg-gradient-to-r from-[#f6b72a] to-[#de8f00]' : 'bg-gradient-to-r from-[#0b5fa8] to-[#0d7fc8]'
             }`}>
-              {isPriority ? 'Jalur Prioritas (Disabilitas)' : 'Jalur Antrian Reguler'}
+              {isPriority ? `Jalur Prioritas (${priorityCategoryLabel})` : 'Data Pengajuan Lama'}
             </div>
 
             {/* Big Ticket Number */}
-            <div className="p-10 text-center bg-slate-50 border-b border-slate-200 space-y-2">
-              <span className="text-xs font-mono uppercase tracking-[0.25em] text-slate-500 block">NOMOR ANTREAN UTAMA</span>
+            <div className="p-10 text-center bg-gradient-to-br from-[#f7fbff] to-[#eef6ff] border-b border-blue-100 space-y-2">
+              <span className="text-xs font-mono uppercase tracking-[0.25em] text-slate-500 block">Kode Pengajuan</span>
               <div 
                 role="alert" 
                 aria-live="assertive"
-                className="text-7xl md:text-9xl font-mono font-bold text-slate-900 leading-none tracking-tighter py-4"
+                className="text-4xl md:text-7xl font-mono font-bold text-slate-900 leading-none tracking-tighter py-4 break-all"
               >
-                {ticket.queueNumber}
+                {applicationCode}
               </div>
-              <span className="text-[10px] font-mono font-bold bg-white border border-slate-300 px-3 py-1 rounded-sm text-slate-800 uppercase tracking-widest inline-block mb-3">
-                STATUS: {ticket.status.toUpperCase()}
+              <div className="mx-auto max-w-md rounded-lg border border-blue-100 bg-white/80 px-4 py-3">
+                <span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">Nomor Antrean</span>
+                <span className="mt-1 block text-2xl font-mono font-bold text-slate-900">{ticket.queueNumber || 'Belum diberikan'}</span>
+              </div>
+              {isPending && (
+                <>
+                  <p className="text-sm text-slate-600 font-medium">
+                    Pengajuan Anda telah tercatat dan sedang menunggu verifikasi petugas.
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {finalQueueNotice}
+                  </p>
+                </>
+              )}
+              <span className={`text-[10px] font-mono font-bold border px-3 py-1 rounded-sm uppercase tracking-widest inline-block mb-3 ${
+                isPending
+                  ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                  : ticket.status === 'VERIFIED' || ticket.status === 'COMPLETED'
+                    ? 'bg-green-50 text-green-800 border-green-200'
+                    : 'bg-red-50 text-red-800 border-red-200'
+              }`}>
+                STATUS: {statusLabelMap[ticket.status] || ticket.status.toUpperCase()}
               </span>
 
               {/* Prototype Simulation Warning Box */}
               <div className="p-3.5 bg-yellow-50 border border-yellow-300 rounded text-yellow-950 font-mono text-[11px] font-bold tracking-wide uppercase max-w-md mx-auto">
                 ⚠️ SIMULASI PROTOTYPE — BUKAN TIKET RESMI M-PASPOR
               </div>
+            </div>
+
+            <div className="p-8 bg-gradient-to-br from-[#f9fbff] to-[#edf5ff] border-b border-blue-100">
+              <span className="font-mono text-xs uppercase tracking-widest text-slate-500 block mb-3">QR CODE TIKET</span>
+              <div className="mx-auto w-fit rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <img
+                  src={qrUrl}
+                  alt="QR code tiket antrean"
+                  className="h-[260px] w-[260px] object-cover"
+                />
+              </div>
+              <p className="mt-3 text-sm text-slate-600 max-w-xl mx-auto">
+                Scan QR code ini saat tiba di lokasi untuk mempercepat verifikasi antrean Anda.
+              </p>
             </div>
 
             {/* Data Specs */}
@@ -165,7 +240,7 @@ export const TicketDetail: React.FC = () => {
                 <span className="font-mono text-xs uppercase tracking-widest text-slate-400 col-span-1">PEMOHON:</span>
                 <div className="col-span-2 space-y-1 text-slate-900">
                   <span className="block font-bold text-lg">{ticket.user.name.toUpperCase()}</span>
-                  <span className="block text-xs font-mono text-slate-500">NIK: {ticket.user.nik}</span>
+                  <span className="block text-xs font-mono text-slate-500">NIK: {maskNik(ticket.user.nik)}</span>
                 </div>
               </div>
 
@@ -210,7 +285,7 @@ export const TicketDetail: React.FC = () => {
                       Nama: <strong>{ticket.companion.companionName.toUpperCase()}</strong>
                     </span>
                     <span className="block text-xs tracking-wide">
-                      NIK: <strong>{ticket.companion.companionNik || '-'}</strong>
+                      NIK: <strong>{ticket.companion.companionNik ? maskNik(ticket.companion.companionNik) : '-'}</strong>
                     </span>
                   </div>
                 </div>
@@ -242,27 +317,27 @@ export const TicketDetail: React.FC = () => {
         <aside className="md:col-span-4 space-y-6 md:sticky md:top-6 print:hidden">
           
           {/* Action Buttons */}
-          <div className="bg-white p-6 border border-slate-200 rounded-lg shadow-sm space-y-3">
-            <span className="font-mono text-xs uppercase tracking-widest text-slate-500 font-bold block">TINDAKAN TIKET</span>
+          <div className="premium-card p-6 rounded-lg space-y-3">
+            <span className="font-mono text-xs uppercase tracking-widest text-[#0b5fa8] font-bold block">TINDAKAN TIKET</span>
             <button
               type="button"
               onClick={() => window.print()}
-              className="w-full py-3.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-mono text-xs uppercase tracking-[0.15em] font-bold rounded transition-all cursor-pointer text-center"
+              className="w-full py-3.5 border border-blue-200 bg-white hover:bg-blue-50 text-[#0b5fa8] font-mono text-xs uppercase tracking-[0.15em] font-bold rounded transition-all cursor-pointer text-center"
             >
               Cetak Tiket (Print)
             </button>
             <button
               type="button"
               onClick={() => navigate('/reservation')}
-              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-mono text-xs uppercase tracking-[0.15em] font-bold rounded transition-all cursor-pointer text-center"
+              className="w-full py-3.5 bg-gradient-to-r from-[#0b5fa8] to-[#0d7fc8] hover:brightness-105 text-white font-mono text-xs uppercase tracking-[0.15em] font-bold rounded transition-all cursor-pointer text-center shadow-[0_12px_25px_rgba(11,95,168,0.22)]"
             >
               Kembali ke Formulir
             </button>
           </div>
 
           {/* Guidelines */}
-          <div className="bg-white p-6 border border-slate-200 rounded-lg shadow-sm space-y-4">
-            <span className="font-mono text-xs uppercase tracking-widest text-slate-500 font-bold block">PETUNJUK KEDATANGAN</span>
+          <div className="premium-card p-6 rounded-lg space-y-4">
+            <span className="font-mono text-xs uppercase tracking-widest text-[#0b5fa8] font-bold block">PETUNJUK KEDATANGAN</span>
             <div className="space-y-3 text-sm text-slate-700 leading-relaxed font-medium">
               <p>
                 1. Harap bawa <strong>seluruh dokumen asli</strong> beserta fotokopinya dalam map terpisah.
